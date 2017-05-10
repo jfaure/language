@@ -5,7 +5,7 @@
 ** Login   <james.faure@epitech.eu>
 ** 
 ** Started on  Tue May  9 00:34:44 2017 James Faure
-** Last update Tue May  9 20:11:21 2017 James Faure
+** Last update Wed May 10 16:30:35 2017 James Faure
 */
 
 #include <malloc.h>
@@ -18,7 +18,7 @@ char	*format_number(char *a)
   r = a;
   if (*a == '-' && ++a)
     putchar('-');
-  while (*a == '0')
+  while (*a == '0' && a[1])
     ++a;
   puts(a);
   return (r);
@@ -88,10 +88,10 @@ char	normalize_args(char const **a, char const **b, int len[3], char sub)
     ++len[0];
   while (b[0][len[1]] && b[0][len[1]] != '.')
     ++len[1];
+  len[2] = len[0] - len[1];
   len[0] += strlen(*a + len[0]);
   len[1] += strlen(*b + len[1]);
-  (len[2] = len[0] - len[1]) < 0 && (len[2] = -len[2]);
-  if (len[0] < len[1] || sub && num_strcmp(*a, *b) < 0)
+  if (len[2] < 0 || sub && num_strcmp(*a, *b) < 0)
     {
       swp = *a;
       *a = *b;
@@ -99,6 +99,7 @@ char	normalize_args(char const **a, char const **b, int len[3], char sub)
       s = len[0];
       len[0] = len[1];
       len[1] = s;
+      len[2] = -len[2];
       return (1);
     }
   return (0);
@@ -107,28 +108,29 @@ char	normalize_args(char const **a, char const **b, int len[3], char sub)
 char	*sum(char const *a, char const *b)
 {
   char	*r;
-  int	len[2];
+  int	len[3];
   int	i;
 
   normalize_args(&a, &b, len, 0);
   r = malloc((len[0] > len[1] ? len[0] : len[1]) + 2);
   *r = '0';
-  i = len[0] - len[1];
+  i = len[2];
   while (i > 0)
     r[i] = a[--i];
-  a += (i = len[0] - len[1]);
+  a += (i = len[2]);
+  while (*a && *b)
+    r[++i] = *a == '.' && ++a && ++b ? '.' : *a++ + *b++ - 48;
+  while (*b)
+    r[++i] = *b++;
   while (*a)
-    r[++i] = *a++ + *b++ - 48;
+    r[++i] = *a++;
   r[++i] = 0;
   while (--i >= 0)
     if (r[i] > '9')
-      if (r[i] == '.' * 2)
-	r[i] = '.';
-      else
-	{
-	  ++r[i - 1];
-	  r[i] -= 10;
-	}
+      {
+	r[i - 1] != '.' && ++r[i - 1] || ++r[i - 2];
+	r[i] -= 10;
+      }
   return (r);
 }
 
@@ -200,7 +202,8 @@ char	*div(char const *a, char const *b)
   memset(r, '0', len);
   buf = malloc(len);
   strncpy(buf, a, 1)[n = 1] = 0;
-  i = 0;
+  *r = '0';
+  i = 1;
   while (num_strcmp(buf, "0") && *a)
     {
       while (num_strcmp(buf, b) < 0 && a[n])
