@@ -5,7 +5,7 @@
 ## Login   <guitta_l@epitech.net>
 ##
 ## Started on  Mon Oct 26 22:41:54 2015 Louis GUITTARD
-## Last update Sun Feb  5 06:38:33 2017 Jamie Faure
+## Last update Thu May 11 04:53:37 2017 James Faure
 ##
 
 GREEN="\\033[32;7m"
@@ -60,7 +60,6 @@ do
     SPEED2=$(echo "$(date +%s.%N) - $START2" | bc -l 2> ${Here}debug2)
     time2=$(echo "$time2+$SPEED2" | bc -l)
     diff -s ${Here}debug1 ${Here}debug3 > /dev/null ; echo $? > ${Here}store
-    echo -n "Test ${c} : "
     if [ $(cat ${Here}store) != 0 ]
     then
         echo -e "[${RED}ERROR${NORMAL}]   ==>[ ${tot} ]<=="

@@ -21,15 +21,11 @@ gen_random() {
     done
 }
 
-if [ $# -ne 3 ]; then
-    op="+"
-    n_tests=20
-    size=1
-else
-    op=$1
-    n_tests=$2
-    size=$3
-fi
+op="-"
+n_tests=20
+size=1
+
+
 export ne op rand_number n_tests size;
 
 for a in $(seq $n_tests); do

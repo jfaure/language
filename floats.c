@@ -5,38 +5,41 @@
 ** Login   <james.faure@epitech.eu>
 ** 
 ** Started on  Tue May  9 00:34:44 2017 James Faure
-** Last update Wed May 10 16:30:35 2017 James Faure
+** Last update Mon May 15 22:55:59 2017 James Faure
 */
 
 #include <malloc.h>
 #include <string.h>
+#include "ops.h"
 
-char	*format_number(char *a)
+char	*print_number(char *a)
 {
   char	*r;
+  char	neg;
 
   r = a;
-  if (*a == '-' && ++a)
-    putchar('-');
+  neg = *a == '-' && ++a;
   while (*a == '0' && a[1])
     ++a;
+  neg && *a != '0' && putchar('-');
   puts(a);
   return (r);
 }
 
+/*
+** Functions are expected to always prefix positive numbers with '0'
+*/
 char	*negate(char *a)
 {
   char	*r;
 
   r = a;
-  while (*r == '0')
-    ++r;
   if (*r == '-')
     {
       *r = '0';
       return (a);
     }
-  else if (--r != a)
+  else if (--r >= a)
     *r = '-';
   else
     {
@@ -50,7 +53,7 @@ char	*negate(char *a)
 }
 
 /*
-** '.' is 46 in ascii
+** '.' is 46 in ascii so ('.' < '0')
 */
 int	num_strcmp(char const *a, char const *b)
 {
@@ -74,6 +77,15 @@ int	num_strcmp(char const *a, char const *b)
   return (strcmp(a, b));
 }
 
+void	swap(void **a, void **b)
+{
+  void	*c;
+
+  c = *a;
+  *a = *b;
+  *b = c;
+}
+
 char	normalize_args(char const **a, char const **b, int len[3], char sub)
 {
   char	const *swp;
@@ -93,12 +105,8 @@ char	normalize_args(char const **a, char const **b, int len[3], char sub)
   len[1] += strlen(*b + len[1]);
   if (len[2] < 0 || sub && num_strcmp(*a, *b) < 0)
     {
-      swp = *a;
-      *a = *b;
-      *b = swp;
-      s = len[0];
-      len[0] = len[1];
-      len[1] = s;
+      swap((void **) a, (void **) b);
+      len[0] ^= len[1] ^= len[0] ^= len[1];
       len[2] = -len[2];
       return (1);
     }
@@ -111,19 +119,18 @@ char	*sum(char const *a, char const *b)
   int	len[3];
   int	i;
 
+  if ((*a == '-' || *b == '-'))
+    return (*a == *b ? negate(sum(a + 1, b + 1)) :
+	    sub(*b == '-' ? a : b, *b == '-' ? b + 1 : a + 1));
   normalize_args(&a, &b, len, 0);
-  r = malloc((len[0] > len[1] ? len[0] : len[1]) + 2);
-  *r = '0';
+  r = malloc((len[0] > len[1] ? len[0] : len[1]) + 3);
+  *r = (*r++ = '0');
   i = len[2];
   while (i > 0)
     r[i] = a[--i];
   a += (i = len[2]);
   while (*a && *b)
     r[++i] = *a == '.' && ++a && ++b ? '.' : *a++ + *b++ - 48;
-  while (*b)
-    r[++i] = *b++;
-  while (*a)
-    r[++i] = *a++;
   r[++i] = 0;
   while (--i >= 0)
     if (r[i] > '9')
@@ -131,33 +138,40 @@ char	*sum(char const *a, char const *b)
 	r[i - 1] != '.' && ++r[i - 1] || ++r[i - 2];
 	r[i] -= 10;
       }
-  return (r);
+  return (r - 1);
 }
 
 char	*sub(char const *a, char const *b)
 {
   char	*r;
-  int	len[2];
+  int	len[3];
   int	i;
-  char	neg;
 
-  neg = normalize_args(&a, &b, len, 1);
+  if (*a == '-' || *b == '-')
+    return (*a == *b ? sub(b + 1, a + 1) : *b == '-' ? sum(a, b + 1) :
+	    negate(sum(a + 1, b)));
+  i = normalize_args(&a, &b, len, 1);
   r = malloc((len[0] > len[1] ? len[0] : len[1]) + 2);
-  *r = '0';
-  i = len[0] - len[1];
+  *r = i ? '-' : '0';
+  i = len[2];
   while (i > 0)
     r[i] = a[--i];
-  a += (i = len[0] - len[1]);
+  a += (i = len[2]);
   while (*a)
-    r[++i] = *a++ - *b++ + 48;
+    r[++i] = *a == '.' && ++a && ++b ? ':' : *a++ - *b++ + 48;
   r[++i] = 0;
-  while (--i >= 0)
-    if (r[i] < '0')
-      {
-	--r[i - 1];
-	r[i] += 10;
-      }
-  return (neg ? negate(r) : r);
+  *len = -1;
+  while (--i > 0)
+    {
+      r[i - 1] == ':' && (*len = i - 1);
+      if (r[i] < '0')
+	{
+	  r[i - 1] != ':' && --r[i - 1] || --r[i - 2];
+	  r[i] += 10;
+	}
+    }
+  *len != -1 && (r[*len] = '.');
+  return (r);
 }
 
 char	*mul(char const *a, char const *b)
@@ -167,10 +181,12 @@ char	*mul(char const *a, char const *b)
   int	i;
   int	j;
 
+  if (*a == '-' || *b == '-')
+    return (*a == *b ? mul(a + 1, b + 1) :
+	    negate(mul(a + (*a == '-'), (b + (*b == '-')))));
   normalize_args(&a, &b, len, 0);
   len[2] = len[0]-- + len[1]-- + 1;
-  r = malloc(len[2] + 2);
-  memset(r, 0, len[2] + 2);
+  memset(r = malloc(len[2] + 2), 0, len[2] + 2);
   i = -1;
   while (a[++i] && (j = -1))
     while (b[++j])
@@ -187,39 +203,39 @@ char	*mul(char const *a, char const *b)
   return (r);
 }
 
-int	scale = 10;
-
 char	*div(char const *a, char const *b)
 {
-  extern int scale;
-  int	len;
   char	*buf;
   char	*r;
+  char	*t;
   int	i;
   int	n;
 
-  r = malloc(len = strlen(a) + scale + 2);
-  memset(r, '0', len);
-  buf = malloc(len);
-  strncpy(buf, a, 1)[n = 1] = 0;
-  *r = '0';
-  i = 1;
-  while (num_strcmp(buf, "0") && *a)
+  if (*a == '-' || *b == '-')
+    return (*a == *b ? div(a + 1, b + 1) :
+	    negate(div(a + (*a == '-'), (b + (*b == '-')))));
+  r = malloc(n = strlen(a) + 2);
+  memset(r, '0', n);
+  buf = malloc(n);
+  *buf = i = n = 0;
+  while (*a == '0')
+    ++a;
+  while (*a)
     {
-      while (num_strcmp(buf, b) < 0 && a[n])
-	{
-	  buf[n] = a[n];
-	  buf[++n] = 0;
-	  r[i++] = '0';
-	}
+      buf[n] = *a++;
+      buf[++n] = 0;
+      r[i] = '0';
       while (num_strcmp(buf, b) >= 0)
 	{
-	  strcpy(buf, sub(buf, b));
+	  strcpy(buf, t = sub(buf, b));
+	  free(t);
 	  ++r[i];
 	}
-      ++i, a += n, n = 1;
+      n = strlen(buf);
+      ++i;
     }
   i || (r[i++] = '0');
   r[i] = 0;
+  free(buf);
   return (r);
 }

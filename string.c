@@ -5,7 +5,7 @@
 ** Login   <james.faure@epitech.eu>
 ** 
 ** Started on  Mon Mar 27 02:02:32 2017 James Faure
-** Last update Tue May  9 04:28:47 2017 James Faure
+** Last update Sun May 14 22:21:47 2017 James Faure
 */
 
 #include "string.h"

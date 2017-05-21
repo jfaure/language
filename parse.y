@@ -5,85 +5,82 @@
 ** Login   <james.faure@epitech.eu>
 ** 
 ** Started on  Tue May  9 03:37:36 2017 James Faure
-** Last update Tue May  9 20:09:23 2017 James Faure
+** Last update Sat May 20 16:18:36 2017 James Faure
 */
 
 %{
   #include "ops.h"
-  #include <ctype.h>
+  #include "lang.h"
   #include <stdio.h>
   #include <string.h>
 
   int	yylex(void);
   void	yyerror(char const *);
-  char	*get_next_number(const int fd);
-  char	*format_number(char *a);
+  
+#include "top.c" //!!!!!!!
 %}
 
 %define api.value.type union
-%token <char *> NUM
-%type <char *> exp
+/*
+** The lexer handles miscellaneous initialization work for raw <t_all *>,
+** the semantic type of all language objects, since it is the earliest place
+** where these may be recognized.
+*/
+%token <t_all *> T_ALL
+%token <char *> ID
+%token DEF F_RETURN IF ELIF ELSE END
+%type <t_all *> obj id
+%type <t_list *> list comma_list// comma_list_opt_paren
 
 %left '-' '+'
 %left '*' '/'
+%left '[' ']'
 
 %%
 
-input:
-  %empty
-| input line
-;
+input: %empty | input line ;
 
 line:
-  '\n'
-| exp '\n'	{ free(format_number($1));	}
+'\n'
+| obj '\n'	{ api_puts($1);	}
 | error '\n'	{ yyerrok;	}
 
-exp:
-NUM		{ $$ = $1;		}
-| '+' exp	{ $$ = $2;		}
-| '-' exp	{ $$ = negate($2);	}
-| exp '+' exp	{ $$ = sum($1, $3); free($1); free($3);	} // Is this safe ?
-| exp '-' exp	{ $$ = sub($1, $3); free($1); free($3);	}
-| exp '*' exp	{ $$ = mul($1, $3); free($1); free($3);	}
-| exp '/' exp	{
-  if (!num_strcmp($3, "0"))
-    YYABORT;
-  $$ = div($1, $3); free($1); free($3);
-  }
-| '(' exp ')'	{ $$ = $2;		}
+obj:
+T_ALL		{ $$ = $1;		}
+| list		{ $$ = api_t_all_new(0, T_LIST, (t_value) $1);		}
+| id		{ $$ = $1;		}
+| '+' obj	{ $$ = $2;		}
+| '-' obj	{ $$ = $2; negate($2->value.bignum);	}
+| obj '+' obj	{ $$ = top_sum($1, $3);	}
+| obj '-' obj	{ $$ = top_sub($1, $3); }
+| obj '*' obj	{ $$ = top_mul($1, $3); }
+| obj '/' obj { $$ = top_div($1, $3); }
+| '(' obj ')'	{ $$ = $2;		}
+| list '[' obj ']'	{ $$ = api_list_get($1, 0, $3);		}
+;
+
+id:
+ID			{ if (!($$ = getsym($1))) YYERROR;	}
+| ID '=' obj	{ putsym($1, $3); $$ = $3;		}
+;
+
+
+list:
+'[' comma_list ']'			{ $$ = $2;	}
+| list '[' obj ':' obj ']'	{ $$ = api_list_slice($1, $3, $5); }
+;
+
+comma_list:
+%empty				{ $$ = api_list_new(0); }
+| T_ALL				{ $$ = api_list_new(1, $1);	}
+| comma_list ',' obj	{ $$ = $1; api_list_push($$, $3);	}
 ;
 
 %%
 
 void	yyerror(char const *s)
 {
-  fprintf(stderr, "%s\n", s);
-}
+  extern int	yylineno;
 
-#define MYPRINTF
-//#define MYPRINTF printf
-int	yylex()
-{
-  char	c;
-  char	*buf;
-
-  while ((c = getchar()) == ' ' || c == '\t');
-  if (c == '.' || isdigit(c))
-    {
-      ungetc(c, stdin);
-      scanf("%m[.0-9]", &buf);
-      yylval.NUM = buf;
-      MYPRINTF("got: %s\n", (char *) (yylval.NUM));
-      return (NUM);
-    }
-  if (c == EOF)
-    return (0);
-  MYPRINTF("returning: %c\n", c);
-  return (c);
-}
-
-int	main()
-{
-  yyparse();
+  fprintf(stderr, "(line %d) %s\n", yylineno, s);
 }

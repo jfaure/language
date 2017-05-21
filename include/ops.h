@@ -5,7 +5,7 @@
 ** Login   <james.faure@epitech.eu>
 ** 
 ** Started on  Tue May  9 03:49:25 2017 James Faure
-** Last update Tue May  9 04:21:29 2017 James Faure
+** Last update Thu May 11 04:44:21 2017 James Faure
 */
 
 #ifndef OPS_H_
@@ -17,5 +17,6 @@ char	*sum(char const *a, char const *b);
 char	*sub(char const *a, char const *b);
 char	*mul(char const *a, char const *b);
 char	*div(char const *a, char const *b);
+char	*mod(char const *a, char const *b);
 
 #endif
